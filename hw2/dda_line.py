@@ -23,7 +23,6 @@ def draw_dda_line(p1x, p1y, p2x, p2y):
     else:
         step = abs(dy)
 
-    print("Slope = %.2f" % (dy / dx))
     dx = dx / step
     dy = dy / step
 
@@ -40,10 +39,19 @@ def draw_dda_line(p1x, p1y, p2x, p2y):
 def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glColor3f(0.4, 1.0, 0.0)
-    draw_dda_line(1, 2, 100, 80)
-    draw_dda_line(10, 60, 30, 10)
-    draw_dda_line(102, 101, 180, 200)
-    draw_dda_line(110, 130, 160, 110)
+
+    # Check different slopes
+    draw_dda_line(1, 2, 100, 80)        # slope ~=  0.79
+    draw_dda_line(10, 60, 30, 10)       # slope ~= -2.5
+    draw_dda_line(102, 101, 180, 200)   # slope ~=  1.27
+    draw_dda_line(110, 130, 160, 110)   # slope ~= -0.40
+
+    # Check vertical and horizontal lines
+    draw_dda_line(50, 300, 70, 300)     # horizontal, increasing x
+    draw_dda_line(50, 300, 30, 300)     # horizontal, decreasing x
+    draw_dda_line(50, 300, 50, 280)     # vertical, decreasing y
+    draw_dda_line(50, 300, 50, 320)     # vertical, increasing y
+
     glutSwapBuffers()
 
 
