@@ -17,6 +17,7 @@ def plotPixel(x, y):
 
 def draw_bres_line(p1x, p1y, p2x, p2y):
     dx = p2x - p1x
+    dy = p2y - p1y
     if dx == 0:
         # special-case code for vertical lines
         if dy > 0:
@@ -30,7 +31,6 @@ def draw_bres_line(p1x, p1y, p2x, p2y):
             y += 1
         return
 
-    dy = p2y - p1y
     k = math.fabs(dy / dx)
     p = 2 * (dy - dx)
 
