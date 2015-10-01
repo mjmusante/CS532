@@ -9,6 +9,17 @@ from OpenGL.GL import *
 import math
 import sys
 
+point_list = (
+        (0, 0, 100, -200),      # negative slope, |m| > 1
+        (50, -20, 80, -40),     # negative slope, |m| < 1
+        (30, -60, 60, -40),     # positive slope, |m| < 1
+        (10, -70, 85, 10),      # positive slope, |m| > 1
+        (50, 300, 70, 300),     #     zero slope, increasing x
+        (50, 300, 30, 300),     #     zero slope, decreasing x
+        (50, 300, 50, 280),     # infinite slope, decreasing y
+        (50, 300, 50, 320),     # infinite slope, increasing y
+        )
+
 def plotPixel(x, y):
     glBegin(GL_POINTS)
     glVertex2i(int(x), int(y))
@@ -64,17 +75,8 @@ def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glColor3f(0.4, 1.0, 0.0)
 
-    # Check different slopes
-    draw_bres_line(1, 2, 100, 80)        # slope ~=  0.79
-    draw_bres_line(10, 60, 30, 10)       # slope ~= -2.5
-    draw_bres_line(102, 101, 180, 200)   # slope ~=  1.27
-    draw_bres_line(110, 130, 160, 110)   # slope ~= -0.40
-
-    # Check vertical and horizontal lines
-    draw_bres_line(50, 300, 70, 300)     # horizontal, increasing x
-    draw_bres_line(50, 300, 30, 300)     # horizontal, decreasing x
-    draw_bres_line(50, 300, 50, 280)     # vertical, decreasing y
-    draw_bres_line(50, 300, 50, 320)     # vertical, increasing y
+    for i in point_list:
+        draw_bres_line(*i)
 
     glutSwapBuffers()
 
@@ -83,7 +85,7 @@ def reshape(width, height):
     glViewport(0, 0, width, height)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, width, height, 0)
+    gluOrtho2D(-width, width, height, -height)
     glMatrixMode(GL_MODELVIEW)
 
 
@@ -95,6 +97,13 @@ def main():
     glutCreateWindow("GLUT Window")
     glutDisplayFunc(display)
     glutReshapeFunc(reshape)
+
+    for i in point_list:
+        (x1, y1, x2, y2) = i
+        if x2 - x1 == 0:
+            print("Slope %s: infinite" % (i,))
+        else:
+            print("Slope %s: %.2f" % (i, (y2 - y1) / (x2 - x1)))
 
     glClearColor(0.2, 0.2, 0.2, 1.0)
 
