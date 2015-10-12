@@ -15,7 +15,6 @@ class Fern:
         x = 0.0
         y = 0.0
         sq34 = math.sqrt(3.0) / 4.0
-        maxx = 0.0
 
         for j in range(1, 20000):
 
@@ -29,11 +28,6 @@ class Fern:
                 (xn, yn) = (0.5*x + 0.5, 0.5*y)
             (x, y) = (xn, yn)
             self.points += ((x, -y),)
-            if x > maxx:
-                maxx = x
-
-        print('maxx %s' % maxx)
-
 
     def display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
