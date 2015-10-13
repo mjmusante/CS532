@@ -9,7 +9,7 @@ from OpenGL.GL import *
 import sys
 
 
-class Blah:
+class ShowImage:
     def __init__(self):
         self.img = bytearray()
 
@@ -21,12 +21,11 @@ class Blah:
 
 
     def display(self):
-        # glClearDepth(1)
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # glMatrixMode(GL_MODELVIEW)
-        # glLoadIdentity()
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
 
         glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, self.texture)
@@ -47,18 +46,21 @@ class Blah:
         glEnd()
         glDisable(GL_TEXTURE_2D)
 
-        self.plotPixel(100, 200)
-
         glutSwapBuffers()
 
 
     def reshape(self, width, height):
         glViewport(0, 0, width, height)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        gluOrtho2D(0, 10, 10, 0)
-
         glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+
+        if width > height:
+            ysize = 1.0
+            xsize = 1.0 * width / height
+        else:
+            xsize = 1.0
+            ysize = 1.0 * height / width
+        gluOrtho2D(-xsize, xsize, ysize, -ysize)
 
 
     def main(self):
@@ -90,10 +92,9 @@ class Blah:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, i.size[0], i.size[1],
                 0, GL_RGB, GL_UNSIGNED_BYTE, self.img)
 
-
         glutMainLoop()
 
 
 if __name__ == "__main__":
-    x = Blah()
+    x = ShowImage()
     x.main()
