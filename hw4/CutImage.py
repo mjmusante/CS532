@@ -14,6 +14,7 @@ class CutImage:
         self.img = bytearray()
         self.i_points = ()
         self.points = ()
+        self.avg = [0, 0]
 
     def plotPixel(self, x, y):
         glColor3f(1.0, 1.0, 1.0)
@@ -76,6 +77,9 @@ class CutImage:
 
 
     def mouse(self, button, state, x, y):
+        if len(self.points) == 4:
+            return
+
         if button == GLUT_LEFT_BUTTON:
             if state == GLUT_DOWN:
                 point = (x, y)
@@ -91,6 +95,23 @@ class CutImage:
 
                     # add the point to the points list
                     self.points += ((xpoint, ypoint),)
+
+                    self.avg[0] += xpoint
+                    self.avg[1] += ypoint
+
+                    if len(self.points) == 4:
+                        self.avg[0] /= 4.0
+                        self.avg[1] /= 4.0
+                        print("(%7.4f %7.4f) center" %
+                                (self.avg[0], self.avg[1]))
+                        for i in range(0, 4):
+                            n = (i + 1) % 4
+                            a = self.points[i][0] - self.avg[0]
+                            b = self.points[i][1] - self.avg[1]
+                            c = self.points[n][0] - self.avg[0]
+                            d = self.points[n][1] - self.avg[1]
+                            print("(%7.4f %7.4f) (%7.4f %7.4f) -> %7.4f" %
+                                    (a, b, c, d, a * d - b * c))
                     glutPostRedisplay()
 
     def main(self):
