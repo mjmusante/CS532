@@ -21,30 +21,28 @@ class Blah:
 
 
     def display(self):
-        glViewport(0, 0, 640, 480)
-
-        glClearDepth(1)
+        # glClearDepth(1)
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+        # glMatrixMode(GL_MODELVIEW)
+        # glLoadIdentity()
 
         glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, self.texture)
         glBegin(GL_QUADS)
 
         glTexCoord2f(0.0, 0.0)
-        glVertex2f(0.0, 0.0)
+        glVertex2f(-1.0, 1.0)
 
         glTexCoord2f(0.0, 1.0)
-        glVertex2f(1.0, 0.0)
+        glVertex2f(-1.0, -1.0)
 
         glTexCoord2f(1.0, 1.0)
-        glVertex2f(1.0, 1.0)
+        glVertex2f(1.0, -1.0)
 
         glTexCoord2f(1.0, 0.0)
-        glVertex2f(0.0, 1.0)
+        glVertex2f(1.0, 1.0)
 
         glEnd()
         glDisable(GL_TEXTURE_2D)
@@ -58,7 +56,7 @@ class Blah:
         glViewport(0, 0, width, height)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        gluOrtho2D(0, width, height, 0)
+        gluOrtho2D(0, 10, 10, 0)
 
         glMatrixMode(GL_PROJECTION)
 

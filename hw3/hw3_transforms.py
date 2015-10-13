@@ -188,4 +188,4 @@ if __name__ == "__main__":
     # pass in 1 for rotation
     # pass in 2 for scale
     # psas in 3 for shear
-    md.main(0)
+    md.main(3)
