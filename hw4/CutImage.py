@@ -13,7 +13,7 @@ class CutImage:
     def __init__(self):
         self.img = bytearray()
         self.i_points = ()
-        self.points = ()
+        self.points = []
         self.avg = [0, 0]
 
     def plotPixel(self, x, y):
@@ -49,13 +49,25 @@ class CutImage:
         glEnd()
         glDisable(GL_TEXTURE_2D)
 
+        cval = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
+                (1.0, 1.0, 1.0)]
         if len(self.points) > 0:
             glPointSize(8.0)
             glBegin(GL_POINTS)
+            cnum = 0
             for i in self.points:
+                glColor3f(*cval[cnum])
                 glVertex2f(*i)
+                cnum += 1
             glEnd()
 
+            if len(self.points) == 4:
+                glBegin(GL_LINE_LOOP)
+                for i in self.points:
+                    glVertex2f(*i)
+                glEnd()
+
+        glColor3f(1.0, 1.0, 1.0)
         glutSwapBuffers()
 
 
@@ -94,7 +106,7 @@ class CutImage:
                         return
 
                     # add the point to the points list
-                    self.points += ((xpoint, ypoint),)
+                    self.points.append((xpoint, ypoint))
 
                     self.avg[0] += xpoint
                     self.avg[1] += ypoint
@@ -102,16 +114,37 @@ class CutImage:
                     if len(self.points) == 4:
                         self.avg[0] /= 4.0
                         self.avg[1] /= 4.0
-                        print("(%7.4f %7.4f) center" %
-                                (self.avg[0], self.avg[1]))
-                        for i in range(0, 4):
-                            n = (i + 1) % 4
+
+                        def det(i, j):
                             a = self.points[i][0] - self.avg[0]
                             b = self.points[i][1] - self.avg[1]
-                            c = self.points[n][0] - self.avg[0]
-                            d = self.points[n][1] - self.avg[1]
-                            print("(%7.4f %7.4f) (%7.4f %7.4f) -> %7.4f" %
-                                    (a, b, c, d, a * d - b * c))
+                            c = self.points[j][0] - self.avg[0]
+                            d = self.points[j][1] - self.avg[1]
+                            return a * d - b * c
+
+                        def slope_intercept(i, j):
+                            a = self.points[i][0]
+                            b = self.points[i][1]
+                            c = self.points[j][0]
+                            d = self.points[j][1]
+                            slope = (d - b) / (c - a)
+                            intercept = b - slope * a
+                            return (slope, intercept)
+
+
+                        self.det = [0, 0, 0, 0]
+                        self.si = ()
+                        for i in range(0, 4):
+                            np = (i + 1) % 4
+                            self.det[i] = det(i, np)
+                            if self.det[i] > 0.0:
+                                x = self.points[i]
+                                self.points[i] = self.points[np]
+                                self.points[np] = x
+                                self.det[i] = det(i, np)
+                            self.si += ((slope_intercept(i, np)),)
+                            print("%7.4f %7.4f" % (self.si[i]))
+
                     glutPostRedisplay()
 
     def main(self):
