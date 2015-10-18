@@ -127,9 +127,13 @@ class CutImage:
         if width * self.img_ratio > height:
             self.ysize = 1.0
             self.xsize = self.img_ratio * width / height
+            self.xoffset = (width - self.tx) / 2
+            self.yoffset = 0
         else:
             self.xsize = 1.0
             self.ysize = 1.0 * height / (width * self.img_ratio)
+            self.xoffset = 0
+            self.yoffset = (height - self.ty) / 2
         gluOrtho2D(-self.xsize, self.xsize, self.ysize, -self.ysize)
 
 
@@ -139,6 +143,8 @@ class CutImage:
 
         if button == GLUT_LEFT_BUTTON:
             if state == GLUT_DOWN:
+                x -= self.xoffset
+                y -= self.yoffset
                 point = (x, y)
 
                 # if two clicks are colocated, ignore the second one
@@ -149,14 +155,12 @@ class CutImage:
 
                 # ensure that the point is within the image
                 (cx, cy) = self.convertPoint(x, y)
-                print("(%s %s) -> (%s %s)" % (x, y, cx, cy))
-
                 if cx < -1.0 or cx > 1.0 or cy < -1.0 or cy > 1.0:
                     return
 
                 # add the point to the points list
 
-                self.points.append((x, y),)
+                self.points.append(point)
  
                 self.avg[0] += x
                 self.avg[1] += y
@@ -170,9 +174,9 @@ class CutImage:
 
                 glutPostRedisplay()
 
-    def crop_image():
-        for h in range(self.min_x, self.max_x):
-            for v in range(self.min_y, self.max_y):
+    def crop_image(self):
+        for v in range(self.min_y, self.max_y + 1):
+            for h in range(self.min_x, self.max_x + 1):
 
                 inside = True
                 for seg in range(0, 4):
@@ -202,7 +206,7 @@ class CutImage:
                             break
 
                 if inside:
-                    start = self.img[3 * self.tx * v + 3 * h]
+                    start = 3 * self.tx * (self.ty - v) + 3 * h
                     self.crop.append(self.img[start])
                     self.crop.append(self.img[start + 1])
                     self.crop.append(self.img[start + 2])
@@ -274,22 +278,18 @@ class CutImage:
 
         self.crop = bytearray()
 
-        # print("(tx, ty) = (%s, %s)" % (self.tx, self.ty))
-        # print("minmax x = (%s, %s)" % (self.min_x, self.max_x))
-        # print("minmax y = (%s, %s)" % (self.min_y, self.max_y))
-        for v in range(self.min_y, self.max_y + 1):
-            for h in range(self.min_x, self.max_x + 1):
-                start = 3 * self.tx * (self.ty - v) + 3 * h
-                # print("%s;" % start, end="")
-                self.crop.append(self.img[start])
-                self.crop.append(self.img[start + 1])
-                self.crop.append(self.img[start + 2])
-            # print(".")
+        if False:
+            self.crop_image()
+        else:
+            for v in range(self.min_y, self.max_y + 1):
+                for h in range(self.min_x, self.max_x + 1):
+                    start = 3 * self.tx * (self.ty - v) + 3 * h
+                    self.crop.append(self.img[start])
+                    self.crop.append(self.img[start + 1])
+                    self.crop.append(self.img[start + 2])
 
         sx = self.max_x - self.min_x + 1
         sy = self.max_y - self.min_y + 1
-        print("sizex = %s, sizey = %s, tot = %s, tsize = %s" %
-                (sx, sy, sx * sy * 3, len(self.crop)))
 
         # Now we've got an image in (R,G,B) values. Convert to a texture.
         self.cropped = glGenTextures(1)
@@ -322,7 +322,6 @@ class CutImage:
         self.tx = i.size[0]
         self.ty = i.size[1]
         self.img_ratio = float(self.ty) / float(self.tx)
-        print("size = (%s, %s)" % (self.tx, self.ty))
         foo = i.getdata()
         for x in foo:
             self.img.append(x[0])
