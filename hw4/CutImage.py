@@ -270,8 +270,8 @@ class CutImage:
                 slope = None
                 intercept = None
             else:
-                slope = (d - b) / (c - a)
-                intercept = b - slope * a
+                slope = 1.0 * (d - b) / (c - a)
+                intercept = b - 1.0 * slope * a
             return (slope, intercept)
 
         for i in range(0, 4):
