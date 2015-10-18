@@ -31,8 +31,6 @@ class CutImage:
         my = ry * self.height / 2.0
         xpoint = (x - mx) / mx
         ypoint = (y - my) / my
-        # xpoint = self.xsize * (2.0 * x / self.width - 1.0)
-        # ypoint = self.ysize * (2.0 * y / self.height - 1.0)
         return (xpoint, ypoint)
 
 
@@ -263,22 +261,23 @@ class CutImage:
             return (slope, intercept)
 
         for i in range(0, 4):
+            np = (i + 1) % 4
             (self.slope[i], self.intercept[i]) = slope_intercept(i, np)
 
 
         # Find the min and max for the image
-        self.min_x = min(self.points[0][0], self.points[1][0],
-                         self.points[2][0], self.points[3][0])
-        self.max_x = max(self.points[0][0], self.points[1][0],
-                         self.points[2][0], self.points[3][0])
-        self.min_y = min(self.points[0][1], self.points[1][1],
-                         self.points[2][1], self.points[3][1])
-        self.max_y = max(self.points[0][1], self.points[1][1],
-                         self.points[2][1], self.points[3][1])
+        self.min_x = int(min(self.points[0][0], self.points[1][0],
+                         self.points[2][0], self.points[3][0]))
+        self.max_x = int(max(self.points[0][0], self.points[1][0],
+                         self.points[2][0], self.points[3][0]))
+        self.min_y = int(min(self.points[0][1], self.points[1][1],
+                         self.points[2][1], self.points[3][1]))
+        self.max_y = int(max(self.points[0][1], self.points[1][1],
+                         self.points[2][1], self.points[3][1]))
 
         self.crop = bytearray()
 
-        if False:
+        if True:
             self.crop_image()
         else:
             for v in range(self.min_y, self.max_y + 1):
