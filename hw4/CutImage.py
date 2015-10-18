@@ -23,6 +23,7 @@ class CutImage:
         self.max_y = None
         self.show_crop = False
         self.img_ratio = 1.0
+        self.do_greyscale = True
 
     def convertPoint(self, x, y):
         rx = float(self.tx) / self.width
@@ -203,15 +204,28 @@ class CutImage:
                             inside = False
                             break
 
-                if inside:
-                    start = 3 * self.tx * (self.ty - v) + 3 * h
-                    self.crop.append(self.img[start])
-                    self.crop.append(self.img[start + 1])
-                    self.crop.append(self.img[start + 2])
+                if self.do_greyscale:
+                    if inside:
+                        start = 3 * self.tx * (self.ty - v) + 3 * h
+                        rval = self.img[start]
+                        gval = self.img[start + 1]
+                        bval = self.img[start + 2]
+
+                        self.crop.append(int(0.2989 * rval +
+                                             0.5870 * gval +
+                                             0.1140 * bval))
+                    else:
+                        self.crop.append(0)     # just add a black pixel
                 else:
-                    self.crop.append(0)     # RGB = 0 for a
-                    self.crop.append(0)     # black point here
-                    self.crop.append(0)
+                    if inside:
+                        start = 3 * self.tx * (self.ty - v) + 3 * h
+                        self.crop.append(self.img[start])
+                        self.crop.append(self.img[start + 1])
+                        self.crop.append(self.img[start + 2])
+                    else:
+                        self.crop.append(0)     # RGB = 0 for a
+                        self.crop.append(0)     # black point here
+                        self.crop.append(0)
 
     def select_inside(self):
         self.avg[0] /= 4.0
@@ -290,6 +304,10 @@ class CutImage:
         sx = self.max_x - self.min_x + 1
         sy = self.max_y - self.min_y + 1
 
+        gl_type = GL_RGB
+        if self.do_greyscale:
+            gl_type = GL_LUMINANCE
+
         # Now we've got an image in (R,G,B) values. Convert to a texture.
         self.cropped = glGenTextures(1)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
@@ -299,8 +317,8 @@ class CutImage:
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sx, sy,
-                0, GL_RGB, GL_UNSIGNED_BYTE, self.crop)
+        glTexImage2D(GL_TEXTURE_2D, 0, gl_type, sx, sy,
+                0, gl_type, GL_UNSIGNED_BYTE, self.crop)
 
         # flag the display() function to show the cropped image
         self.show_crop = True
