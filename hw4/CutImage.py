@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+from __future__ import print_function
+
 from PIL import Image
 
 from OpenGL.GLUT import *
@@ -15,13 +17,27 @@ class CutImage:
         self.i_points = ()
         self.points = []
         self.avg = [0, 0]
+        self.min_x = None
+        self.max_x = None
+        self.min_y = None
+        self.max_y = None
+        self.show_crop = False
+        self.img_ratio = 1.0
 
-    def plotPixel(self, x, y):
-        glColor3f(1.0, 1.0, 1.0)
-        glBegin(GL_POINTS)
-        glVertex2i(x, y)
-        glEnd()
+    def convertPoint(self, x, y):
+        rx = float(self.tx) / self.width
+        ry = float(self.ty) / self.height
+        mx = rx * self.width / 2.0
+        my = ry * self.height / 2.0
+        xpoint = (x - mx) / mx
+        ypoint = (y - my) / my
+        # xpoint = self.xsize * (2.0 * x / self.width - 1.0)
+        # ypoint = self.ysize * (2.0 * y / self.height - 1.0)
+        return (xpoint, ypoint)
 
+
+    def offsetPoint(self, x, y):
+        return (xpoint, ypoint)
 
     def display(self):
         glClearColor(0, 0, 0, 0)
@@ -31,24 +47,43 @@ class CutImage:
         glLoadIdentity()
 
         glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, self.texture)
+
+        if self.show_crop:
+            glBindTexture(GL_TEXTURE_2D, self.cropped)
+            vertex1 = self.convertPoint(self.min_x, self.min_y)
+            vertex2 = self.convertPoint(self.min_x, self.max_y)
+            vertex3 = self.convertPoint(self.max_x, self.max_y)
+            vertex4 = self.convertPoint(self.max_x, self.min_y)
+        else:
+            glBindTexture(GL_TEXTURE_2D, self.texture)
+            vertex1 = (-1.0,  1.0)
+            vertex2 = (-1.0, -1.0)
+            vertex3 = ( 1.0, -1.0)
+            vertex4 = ( 1.0,  1.0)
+
         glBegin(GL_QUADS)
 
         glTexCoord2f(0.0, 0.0)
-        glVertex2f(-1.0, 1.0)
+        glVertex2f(*vertex1)
 
         glTexCoord2f(0.0, 1.0)
-        glVertex2f(-1.0, -1.0)
+        glVertex2f(*vertex2)
 
         glTexCoord2f(1.0, 1.0)
-        glVertex2f(1.0, -1.0)
+        glVertex2f(*vertex3)
 
         glTexCoord2f(1.0, 0.0)
-        glVertex2f(1.0, 1.0)
+        glVertex2f(*vertex4)
 
         glEnd()
         glDisable(GL_TEXTURE_2D)
 
+        #
+        # Draw the points in this order: red, green, blue, white.
+        # This allows us to visually distinguish each point, and
+        # determine that the "reorder" algorithm is actually
+        # working to sort the points anticlockwise.
+        #
         cval = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
                 (1.0, 1.0, 1.0)]
         if len(self.points) > 0:
@@ -57,17 +92,27 @@ class CutImage:
             cnum = 0
             for i in self.points:
                 glColor3f(*cval[cnum])
-                glVertex2f(*i)
+                glVertex2f(*self.convertPoint(*i))
                 cnum += 1
             glEnd()
 
             if len(self.points) == 4:
                 glBegin(GL_LINE_LOOP)
                 for i in self.points:
-                    glVertex2f(*i)
+                    glVertex2f(*self.convertPoint(*i))
                 glEnd()
 
         glColor3f(1.0, 1.0, 1.0)
+
+        # show the min & max for the quad
+        if self.min_x:
+            glBegin(GL_LINE_LOOP)
+            glVertex2f(*self.convertPoint(self.min_x, self.min_y))
+            glVertex2f(*self.convertPoint(self.min_x, self.max_y))
+            glVertex2f(*self.convertPoint(self.max_x, self.max_y))
+            glVertex2f(*self.convertPoint(self.max_x, self.min_y))
+            glEnd()
+
         glutSwapBuffers()
 
 
@@ -79,12 +124,12 @@ class CutImage:
         self.width = width
         self.height = height
 
-        if width > height:
+        if width * self.img_ratio > height:
             self.ysize = 1.0
-            self.xsize = 1.0 * width / height
+            self.xsize = self.img_ratio * width / height
         else:
             self.xsize = 1.0
-            self.ysize = 1.0 * height / width
+            self.ysize = 1.0 * height / (width * self.img_ratio)
         gluOrtho2D(-self.xsize, self.xsize, self.ysize, -self.ysize)
 
 
@@ -95,57 +140,171 @@ class CutImage:
         if button == GLUT_LEFT_BUTTON:
             if state == GLUT_DOWN:
                 point = (x, y)
-                if point not in self.i_points:
-                    self.i_points += (point,)
-                    xpoint = self.xsize * (2.0 * x / self.width - 1.0)
-                    ypoint = self.ysize * (2.0 * y / self.height - 1.0)
 
-                    # ensure that the point is within the image
-                    if xpoint < -1.0 or xpoint > 1.0 or \
-                       ypoint < -1.0 or ypoint > 1.0:
-                        return
+                # if two clicks are colocated, ignore the second one
+                if point in self.i_points:
+                    return
 
-                    # add the point to the points list
-                    self.points.append((xpoint, ypoint))
+                self.i_points += (point,)
 
-                    self.avg[0] += xpoint
-                    self.avg[1] += ypoint
+                # ensure that the point is within the image
+                (cx, cy) = self.convertPoint(x, y)
+                print("(%s %s) -> (%s %s)" % (x, y, cx, cy))
 
-                    if len(self.points) == 4:
-                        self.avg[0] /= 4.0
-                        self.avg[1] /= 4.0
+                if cx < -1.0 or cx > 1.0 or cy < -1.0 or cy > 1.0:
+                    return
 
-                        def det(i, j):
-                            a = self.points[i][0] - self.avg[0]
-                            b = self.points[i][1] - self.avg[1]
-                            c = self.points[j][0] - self.avg[0]
-                            d = self.points[j][1] - self.avg[1]
-                            return a * d - b * c
+                # add the point to the points list
 
-                        def slope_intercept(i, j):
-                            a = self.points[i][0]
-                            b = self.points[i][1]
-                            c = self.points[j][0]
-                            d = self.points[j][1]
-                            slope = (d - b) / (c - a)
-                            intercept = b - slope * a
-                            return (slope, intercept)
+                self.points.append((x, y),)
+ 
+                self.avg[0] += x
+                self.avg[1] += y
+
+                # self.points = [(0, 0), (1, 7), (8, 8), (7, 1)]
+                # self.avg[0] = 0 + 1 + 8 + 7
+                # self.avg[1] = 0 + 7 + 8 + 1
+
+                if len(self.points) == 4:
+                    self.select_inside()
+
+                glutPostRedisplay()
+
+    def crop_image():
+        for h in range(self.min_x, self.max_x):
+            for v in range(self.min_y, self.max_y):
+
+                inside = True
+                for seg in range(0, 4):
+                    nseg = (seg + 1) % 4
+                    (h1, h2) = (self.points[seg][0], self.points[nseg][0])
+                    (v1, v2) = (self.points[seg][1], self.points[nseg][1])
+                    if self.slope[seg] != None:
+                        yL = self.slope[seg] * h + self.intercept[seg]
+
+                        def pointInQuad(h1, v1, h2, v2, Hpix, yL, Vpix):
+                            # copied directly from Select_Inside.m
+                            if h2 > h1:
+                                if yL < Vpix:
+                                    return False
+                            elif h2 < h1:
+                                if yL > Vpix:
+                                    return False
+                            else:
+                                if Hpix < h2 and v2 > v1:
+                                    return False
+                                if Hpix > h2 and v2 < v1:
+                                    return False
+                            return True
+
+                        if not pointInQuad(h1, v1, h2, v2, h, yL, v):
+                            inside = False
+                            break
+
+                if inside:
+                    start = self.img[3 * self.tx * v + 3 * h]
+                    self.crop.append(self.img[start])
+                    self.crop.append(self.img[start + 1])
+                    self.crop.append(self.img[start + 2])
+                else:
+                    self.crop.append(0)     # RGB = 0 for a
+                    self.crop.append(0)     # black point here
+                    self.crop.append(0)
+
+    def select_inside(self):
+        self.avg[0] /= 4.0
+        self.avg[1] /= 4.0
+
+        # Calculate the determinant of two points based
+        # on the center of the quad
+        def det(i, j):
+            a = self.points[i][0] - self.avg[0]
+            b = self.points[i][1] - self.avg[1]
+            c = self.points[j][0] - self.avg[0]
+            d = self.points[j][1] - self.avg[1]
+            return a * d - b * c
 
 
-                        self.det = [0, 0, 0, 0]
-                        self.si = ()
-                        for i in range(0, 4):
-                            np = (i + 1) % 4
-                            self.det[i] = det(i, np)
-                            if self.det[i] > 0.0:
-                                x = self.points[i]
-                                self.points[i] = self.points[np]
-                                self.points[np] = x
-                                self.det[i] = det(i, np)
-                            self.si += ((slope_intercept(i, np)),)
-                            print("%7.4f %7.4f" % (self.si[i]))
+        # keep looping until all points are anticlockwise
+        # which means all the determinants are negative
+        self.det = [0, 0, 0, 0]
+        swapped = True
+        while swapped:
+            swapped = False
+            for i in range(0, 4):
+                np = (i + 1) % 4
+                self.det[i] = det(i, np)
+                if self.det[i] > 0.0:
+                    swapped = True
+                    x = self.points[i]
+                    self.points[i] = self.points[np]
+                    self.points[np] = x
+                    self.det[i] = det(i, np)
 
-                    glutPostRedisplay()
+        # Calculate the slope and the intercept of each
+        # pair of lines
+        self.slope = [0, 0, 0, 0]
+        self.intercept = [0, 0, 0, 0]
+        def slope_intercept(i, j):
+            a = self.points[i][0]
+            b = self.points[i][1]
+            c = self.points[j][0]
+            d = self.points[j][1]
+            if c - a == 0.0:
+                slope = None
+                intercept = None
+            else:
+                slope = (d - b) / (c - a)
+                intercept = b - slope * a
+            return (slope, intercept)
+
+        for i in range(0, 4):
+            (self.slope[i], self.intercept[i]) = slope_intercept(i, np)
+
+
+        # Find the min and max for the image
+        self.min_x = min(self.points[0][0], self.points[1][0],
+                         self.points[2][0], self.points[3][0])
+        self.max_x = max(self.points[0][0], self.points[1][0],
+                         self.points[2][0], self.points[3][0])
+        self.min_y = min(self.points[0][1], self.points[1][1],
+                         self.points[2][1], self.points[3][1])
+        self.max_y = max(self.points[0][1], self.points[1][1],
+                         self.points[2][1], self.points[3][1])
+
+        self.crop = bytearray()
+
+        # print("(tx, ty) = (%s, %s)" % (self.tx, self.ty))
+        # print("minmax x = (%s, %s)" % (self.min_x, self.max_x))
+        # print("minmax y = (%s, %s)" % (self.min_y, self.max_y))
+        for v in range(self.min_y, self.max_y + 1):
+            for h in range(self.min_x, self.max_x + 1):
+                start = 3 * self.tx * (self.ty - v) + 3 * h
+                # print("%s;" % start, end="")
+                self.crop.append(self.img[start])
+                self.crop.append(self.img[start + 1])
+                self.crop.append(self.img[start + 2])
+            # print(".")
+
+        sx = self.max_x - self.min_x + 1
+        sy = self.max_y - self.min_y + 1
+        print("sizex = %s, sizey = %s, tot = %s, tsize = %s" %
+                (sx, sy, sx * sy * 3, len(self.crop)))
+
+        # Now we've got an image in (R,G,B) values. Convert to a texture.
+        self.cropped = glGenTextures(1)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glBindTexture(GL_TEXTURE_2D, self.cropped)
+
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sx, sy,
+                0, GL_RGB, GL_UNSIGNED_BYTE, self.crop)
+
+        # flag the display() function to show the cropped image
+        self.show_crop = True
 
     def main(self):
         glutInit(sys.argv)
@@ -160,6 +319,10 @@ class CutImage:
         glClearColor(0.2, 0.2, 0.2, 1.0)
 
         i = Image.open("../images/Spring.bmp")
+        self.tx = i.size[0]
+        self.ty = i.size[1]
+        self.img_ratio = float(self.ty) / float(self.tx)
+        print("size = (%s, %s)" % (self.tx, self.ty))
         foo = i.getdata()
         for x in foo:
             self.img.append(x[0])
