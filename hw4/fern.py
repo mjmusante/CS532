@@ -10,6 +10,10 @@ import sys
 class Fern:
     def __init__(self):
         self.points = ()
+        minx = 0
+        miny = 0
+        maxx = 0
+        maxy = 0
 
         for j in range(1, 10000):
             x = random.random()
@@ -28,6 +32,13 @@ class Fern:
                     (xn, yn) = (0.85*x + 0.04*y, -0.04*x + 0.85*y + 1.6)
                 (x, y) = (xn, yn)
             self.points += ((x, -y),)
+            minx = min(x, minx)
+            maxx = max(x, maxx)
+            miny = min(y, miny)
+            maxy = max(y, maxy)
+
+        self.y_size = maxy - miny
+        self.x_size = maxx - minx
 
 
     def display(self):
@@ -48,15 +59,18 @@ class Fern:
         glLoadIdentity()
  
         # calculate best ortho to keep the image square
-        if width > height:
-            y_size = 12.0
-            x_size = 6.0 * width / height
-        else:
-            x_size = 6.0
-            y_size = 12.0 * height / width
-        gluOrtho2D(-x_size, x_size, 0.0, -y_size)
+#        if width > height:
+#            y_size = self.y_size
+#            x_size = self.x_size * width / height
+#        else:
+#            x_size = self.x_size
+#            y_size = self.y_size * height / width
+        gluOrtho2D(-self.x_size, self.x_size, 0.0, -self.y_size)
         glMatrixMode(GL_MODELVIEW)
 
+
+    def keyboard(self, a, b, c):
+        sys.exit(0)
 
     def main(self):
         glutInit(sys.argv)
@@ -66,6 +80,7 @@ class Fern:
         glutCreateWindow("GLUT Window")
         glutDisplayFunc(self.display)
         glutReshapeFunc(self.reshape)
+        glutKeyboardFunc(self.keyboard)
 
         glClearColor(0.2, 0.2, 0.2, 1.0)
 
