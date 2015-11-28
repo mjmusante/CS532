@@ -4,6 +4,8 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
+from datetime import datetime
+
 import math
 import random
 import sys
@@ -27,10 +29,15 @@ HEIGHT = 480
 
 VIEW = [0.0, 0.0, 0.0]
 PLAYER = [10.0, 11.7, 0.0]
-POS_X = 10
-POS_Z = 10
+POS_X = 0
+POS_Y = 0
+POS_Z = 0
+JUMP = False
+JUMPING = False
+JUMPLOC = 0
+JUMPDEG = 0
 
-CUBELIST = []
+CUBELIST = {}
 
 def draw_axes():
     glLineWidth(2.0)
@@ -97,10 +104,12 @@ class Cube:
         self.color = c
 
 def set_cubelist():
-    for y in range (-4, 4):
+    blah = ""
+    for z in range (-16, 16):
         for x in range(-16, 16):
-            c = Cube((x, y, 0), 0.5 + random.random() / 2.0)
-            CUBELIST.append(c)
+            pos = (x, -1 - max(x, z), z)
+            CUBELIST[pos] = 0.5 + random.random() / 2.0
+    print(blah)
 
 
 def display():
@@ -113,16 +122,17 @@ def display():
     glLoadIdentity()
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
-    glRotatef(ROTATION[0], 0, 1, 0)
-    glRotatef(-ROTATION[1], math.cos(math.radians(ROTATION[0])),
-              0, math.sin(math.radians(ROTATION[0])))
-    glTranslatef(POS_X, 1.7, POS_Z)
+    gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
+              POS_X + 10 * math.cos(math.radians(ROTATION[0])),
+              POS_Y + 10 * math.cos(math.radians(ROTATION[1])) + 1.7,
+              POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
+              0, 1, 0)
     glColor3f(0.3, 0.8, 0.4)
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
     for c in CUBELIST:
-        glColor3f(0.3, c.color, 0.4)
-        draw_cube(*c.pos)
+        glColor3f(0.3, CUBELIST[c], 0.4)
+        draw_cube(*c)
 
     glColor3f(1, 1, 1)
 
@@ -156,22 +166,85 @@ def reshape(width, height):
     gluPerspective(65.0, width / float(height), 0.1, 60.0)
 
 def keypress(key, x, y):
-    global POS_X
-    global POS_Z
+    global POS_X, POS_Y, POS_Z
+    global JUMP
+    global WIN
+
+    new_x = POS_X
+    new_z = POS_Z
 
     if key == b'w':
-        POS_Z += 0.2 * math.sin(math.radians(ROTATION[0]))
-        POS_X += 0.2 * math.cos(math.radians(ROTATION[0]))
+        new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
+        new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
     elif key == b's':
-        POS_Z -= 0.2 * math.sin(math.radians(ROTATION[0]))
-        POS_X -= 0.2 * math.cos(math.radians(ROTATION[0]))
+        new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
+        new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
     elif key == b'a':
-        POS_Z += 0.2 * math.sin(math.radians(ROTATION[0] + 90))
-        POS_X += 0.2 * math.cos(math.radians(ROTATION[0] + 90))
+        new_z += 0.2 * math.sin(math.radians(ROTATION[0] + 90))
+        new_x += 0.2 * math.cos(math.radians(ROTATION[0] + 90))
     elif key == b'd':
-        POS_Z += 0.2 * math.sin(math.radians(ROTATION[0] - 90))
-        POS_X += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
-    glutPostRedisplay()
+        new_z += 0.2 * math.sin(math.radians(ROTATION[0] - 90))
+        new_x += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
+    elif key == b' ':
+        JUMP = True
+    elif key == 0x27:
+        glutDestroyWindow(WIN)
+        sys.exit(0)
+    else:
+        print("%x" % key)
+
+    if not block_at_pos(new_x, POS_Y, new_z) and \
+       not block_at_pos(new_x, POS_Y + 1, new_z):
+        POS_X = new_x
+        POS_Z = new_z
+        glutPostRedisplay()
+
+
+def block_at_pos(x, y, z):
+    x = int(x)
+    y = int(y)
+    z = int(z)
+    return (x, y, z) in CUBELIST
+
+TIME = datetime.now()
+
+def idle():
+    global TIME, POS_Y
+    global JUMP, JUMPING, JUMPDEG, JUMPLOC
+
+    cur = datetime.now()
+    diff = cur - TIME
+    if diff.microseconds >= 50000:
+        TIME = cur
+        redisp = False
+
+        if not block_at_pos(POS_X, POS_Y - 1, POS_Z) or \
+                POS_Y > int(POS_Y) + 0.25:
+            POS_Y -= 0.25
+            redisp = True
+
+        if JUMPING:
+            JUMPDEG += 10
+            if JUMPDEG < 180:
+                new_y = JUMPLOC + 2 * math.sin(math.radians(JUMPDEG))
+            else:
+                new_y = JUMPLOC
+                JUMPING = False
+
+            if block_at_pos(POS_X, new_y, POS_Z):
+                new_y = int(new_y) + 1
+                JUMPING = False
+
+            POS_Y = new_y
+            JUMP = False
+        elif JUMP:
+            JUMPING = True
+            JUMPDEG = 0
+            JUMPLOC = POS_Y
+            JUMP = False
+
+        if redisp:
+            glutPostRedisplay()
 
 
 def mouse(x, y):
@@ -188,7 +261,6 @@ def mouse(x, y):
     # because we're just using it as a direction to look.
     #
 
-    # first, convert the mouse x/y to a range
     x = x % 640
     y = y % 480
     ROTATION[0] = (x / 640.0) * 360.0
@@ -197,6 +269,8 @@ def mouse(x, y):
     glutPostRedisplay()
 
 def main():
+    global WIN
+
     set_cubelist()
 
     print("init")
@@ -208,7 +282,7 @@ def main():
     print("init display mode")
     glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE | GLUT_DEPTH)
     print("create window")
-    glutCreateWindow("Camera Analogy")
+    WIN = glutCreateWindow("Camera Analogy")
     print("set display func")
     glutDisplayFunc(display)
     print("set reshape func")
@@ -217,12 +291,15 @@ def main():
     glutKeyboardFunc(keypress)
     print("set mouse func")
     glutPassiveMotionFunc(mouse)
+    print("set idle func")
+    glutIdleFunc(idle)
 
     print("clear color")
     glClearColor(0.3, 0.4, 1.0, 1.0)
 
     print("main loop")
     glutMainLoop()
+    print("done")
 
 
 if __name__ == "__main__":
