@@ -1,10 +1,14 @@
 #! /usr/bin/python
 
+from __future__ import print_function
+
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
 from datetime import datetime
+
+from util.texture import Texture
 
 import math
 import random
@@ -21,6 +25,9 @@ YN = [0.0, -1.0, 0.0]
 ZP = [0.0, 0.0, 1.0]
 ZN = [0.0, 0.0, -1.0]
 
+TEX_TOP = False
+TEX_BOT = False
+TEX_SIDE = False
 
 ROTATION = [0.0, 0.0]
 
@@ -36,6 +43,9 @@ JUMP = False
 JUMPING = False
 JUMPLOC = 0
 JUMPDEG = 0
+
+FORWARD = False
+BACKWARD = False
 
 CUBELIST = {}
 
@@ -57,45 +67,36 @@ def draw_axes():
 def draw_cube(x, y, z):
     d = 0.5
 
-    glBegin(GL_QUADS)
 
     # top
-    glVertex3f(x - d, y + d, z - d)
-    glVertex3f(x - d, y + d, z + d)
-    glVertex3f(x + d, y + d, z + d)
-    glVertex3f(x + d, y + d, z - d)
+    if not (x, y+1, z) in CUBELIST:
+        TEX_TOP.draw([(x - d, y + d, z - d), (x - d, y + d, z + d),
+                      (x + d, y + d, z + d), (x + d, y + d, z - d)])
 
     # bottom
-    glVertex3f(x - d, y - d, z - d)
-    glVertex3f(x + d, y - d, z - d)
-    glVertex3f(x + d, y - d, z + d)
-    glVertex3f(x - d, y - d, z + d)
+    if not (x, y-1, z) in CUBELIST:
+        TEX_BOT.draw([(x - d, y - d, z - d), (x + d, y - d, z - d),
+                      (x + d, y - d, z + d), (x - d, y - d, z + d)])
 
     # left
-    glVertex3f(x - d, y - d, z - d)
-    glVertex3f(x - d, y - d, z + d)
-    glVertex3f(x - d, y + d, z + d)
-    glVertex3f(x - d, y + d, z - d)
+    if not (x-1, y, z) in CUBELIST:
+        TEX_SIDE.draw([(x - d, y - d, z - d), (x - d, y - d, z + d),
+                       (x - d, y + d, z + d), (x - d, y + d, z - d)])
 
     # right
-    glVertex3f(x + d, y - d, z + d)
-    glVertex3f(x + d, y - d, z - d)
-    glVertex3f(x + d, y + d, z - d)
-    glVertex3f(x + d, y + d, z + d)
+    if not (x+1, y, z) in CUBELIST:
+        TEX_SIDE.draw([(x + d, y - d, z + d), (x + d, y - d, z - d),
+                       (x + d, y + d, z - d), (x + d, y + d, z + d)])
 
     # front
-    glVertex3f(x - d, y - d, z + d)
-    glVertex3f(x + d, y - d, z + d)
-    glVertex3f(x + d, y + d, z + d)
-    glVertex3f(x - d, y + d, z + d)
+    if not (x, y, z+1) in CUBELIST:
+        TEX_SIDE.draw([(x - d, y - d, z + d), (x + d, y - d, z + d),
+                       (x + d, y + d, z + d), (x - d, y + d, z + d)])
 
     # back
-    glVertex3f(x + d, y - d, z - d)
-    glVertex3f(x - d, y - d, z - d)
-    glVertex3f(x - d, y + d, z - d)
-    glVertex3f(x + d, y + d, z - d)
-
-    glEnd()
+    if not (x, y, z-1) in CUBELIST:
+        TEX_SIDE.draw([(x + d, y - d, z - d), (x - d, y - d, z - d),
+                       (x - d, y + d, z - d), (x + d, y + d, z - d)])
 
 
 class Cube:
@@ -107,8 +108,9 @@ def set_cubelist():
     blah = ""
     for z in range (-16, 16):
         for x in range(-16, 16):
-            pos = (x, -1 - max(x, z), z)
-            CUBELIST[pos] = 0.5 + random.random() / 2.0
+            for y in range(-4, 1):
+                pos = (x, y, z)
+                CUBELIST[pos] = 1
     print(blah)
 
 
@@ -121,20 +123,19 @@ def display():
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glEnable(GL_DEPTH_TEST)
+    glEnable(GL_TEXTURE_2D)
     glDepthFunc(GL_LESS)
     gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
               POS_X + 10 * math.cos(math.radians(ROTATION[0])),
               POS_Y + 10 * math.cos(math.radians(ROTATION[1])) + 1.7,
               POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
               0, 1, 0)
-    glColor3f(0.3, 0.8, 0.4)
-
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-    for c in CUBELIST:
-        glColor3f(0.3, CUBELIST[c], 0.4)
-        draw_cube(*c)
 
     glColor3f(1, 1, 1)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+    for c in CUBELIST:
+        draw_cube(*c)
+
 
     draw_axes()
     glFlush()
@@ -169,16 +170,21 @@ def keypress(key, x, y):
     global POS_X, POS_Y, POS_Z
     global JUMP
     global WIN
+    global FORWARD, BACKWARD
 
     new_x = POS_X
     new_z = POS_Z
 
     if key == b'w':
-        new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
-        new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
+        # new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
+        # new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
+        print("forward start")
+        FORWARD = True
     elif key == b's':
-        new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
-        new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
+        # new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
+        # new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
+        print("backward start")
+        BACKWARD = True
     elif key == b'a':
         new_z += 0.2 * math.sin(math.radians(ROTATION[0] + 90))
         new_x += 0.2 * math.cos(math.radians(ROTATION[0] + 90))
@@ -187,24 +193,63 @@ def keypress(key, x, y):
         new_x += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
     elif key == b' ':
         JUMP = True
-    elif key == 0x27:
+    elif key == "\x1b":
         glutDestroyWindow(WIN)
         sys.exit(0)
     else:
-        print("%x" % key)
+        print(key)
 
-    if not block_at_pos(new_x, POS_Y, new_z) and \
-       not block_at_pos(new_x, POS_Y + 1, new_z):
+
+def update_position(new_x, new_y, new_z):
+    global POS_X, POS_Y, POS_Z
+
+    if not block_at_pos(new_x, new_y + 1, new_z) and \
+       not block_at_pos(new_x, new_y + 2, new_z):
         POS_X = new_x
+        POS_Y = new_y
         POS_Z = new_z
-        glutPostRedisplay()
+        redisp = True
 
+    return redisp
+
+def keyup(key, x, y):
+    global FORWARD, BACKWARD
+    if key == b'w':
+        FORWARD = False
+        print('forward end')
+    elif key == b's':
+        BACKWARD = False
+        print('backward end')
 
 def block_at_pos(x, y, z):
     x = int(x)
     y = int(y)
     z = int(z)
     return (x, y, z) in CUBELIST
+
+def timer(val):
+    glutTimerFunc(33, timer, 0)
+
+    global FORWARD, BACKWARD, ROTATION
+    global POS_X, POS_Y, POS_Z
+
+    new_x, new_y, new_z = (POS_X, POS_Y, POS_Z)
+
+    if FORWARD:
+        new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
+        new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
+    if BACKWARD:
+        new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
+        new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
+
+    if not block_at_pos(POS_X, POS_Y - 1, POS_Z) or \
+            POS_Y > int(POS_Y) + 0.25:
+        new_y -= 0.2
+    
+    if update_position(new_x, new_y, new_z):
+        glutPostRedisplay()
+
+
 
 TIME = datetime.now()
 
@@ -269,37 +314,36 @@ def mouse(x, y):
     glutPostRedisplay()
 
 def main():
-    global WIN
+    global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
 
     set_cubelist()
 
-    print("init")
     glutInit(sys.argv)
-    print("init window pos")
     glutInitWindowPosition(200, 300)
-    print("init window size")
     glutInitWindowSize(640, 480)
-    print("init display mode")
     glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE | GLUT_DEPTH)
-    print("create window")
     WIN = glutCreateWindow("Camera Analogy")
-    print("set display func")
     glutDisplayFunc(display)
-    print("set reshape func")
     glutReshapeFunc(reshape)
-    print("set keypress func")
+    glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
     glutKeyboardFunc(keypress)
-    print("set mouse func")
+    glutKeyboardUpFunc(keyup)
     glutPassiveMotionFunc(mouse)
-    print("set idle func")
-    glutIdleFunc(idle)
+    glutTimerFunc(50, timer, 0)
+    # glutIdleFunc(idle)
 
-    print("clear color")
+    TEX_TOP = Texture()
+    TEX_TOP.load("grass-top.jpg")
+
+    TEX_BOT = Texture()
+    TEX_BOT.load("grass-bottom.jpg")
+
+    TEX_SIDE = Texture()
+    TEX_SIDE.load("grass-side.jpg")
+
     glClearColor(0.3, 0.4, 1.0, 1.0)
 
-    print("main loop")
     glutMainLoop()
-    print("done")
 
 
 if __name__ == "__main__":
