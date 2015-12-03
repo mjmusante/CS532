@@ -47,6 +47,8 @@ JUMPDEG = 0
 FORWARD = False
 BACKWARD = False
 
+LOOK_X, LOOK_Y, LOOK_Z = (0, 0, 0)
+
 CUBELIST = {}
 
 def draw_reticle():
@@ -121,6 +123,10 @@ def set_cubelist():
 
 
 def display():
+    global POS_X, POS_Y, POS_Z
+    global LOOK_X, LOOK_Y, LOOK_Z
+    global CUBELIST
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     # 3D Drawing: using gluPerspective
@@ -133,10 +139,13 @@ def display():
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_TEXTURE_2D)
     glDepthFunc(GL_LESS)
+#    gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
+#              POS_X + 10 * math.cos(math.radians(ROTATION[0])),
+#              POS_Y + 10 * math.cos(math.radians(ROTATION[1])) + 1.7,
+#              POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
+#              0, 1, 0)
     gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
-              POS_X + 10 * math.cos(math.radians(ROTATION[0])),
-              POS_Y + 10 * math.cos(math.radians(ROTATION[1])) + 1.7,
-              POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
+              LOOK_X, LOOK_Y, LOOK_Z,
               0, 1, 0)
 
     glColor3f(1, 1, 1)
@@ -147,11 +156,13 @@ def display():
     # 2D Drawing: using gluOrtho2D
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
+    glDisable(GL_DEPTH_TEST)
+    glDisable(GL_TEXTURE_2D)
     gluOrtho2D(0, WIDTH, HEIGHT, 0);
 
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    glColor3f(1, 0, 0)
+    glColor3f(1, 1, 1)
     draw_reticle()
         
     glFlush()
@@ -238,22 +249,23 @@ def timer(val):
 
     global FORWARD, BACKWARD, ROTATION
     global POS_X, POS_Y, POS_Z
+    global LOOK_X, LOOK_Y
 
     new_x, new_y, new_z = (POS_X, POS_Y, POS_Z)
 
     if FORWARD:
-        new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
-        new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
+        new_x += 0.2 * LOOK_X
+        new_z += 0.2 * LOOK_Z
     if BACKWARD:
-        new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
-        new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
+        new_x -= 0.2 * LOOK_X
+        new_z -= 0.2 * LOOK_Z
 
     if not block_at_pos(POS_X, POS_Y - 1, POS_Z) or \
             POS_Y > int(POS_Y) + 0.25:
         new_y -= 0.2
     
-    if update_position(new_x, new_y, new_z):
-        glutPostRedisplay()
+    update_position(new_x, new_y, new_z)
+    glutPostRedisplay()
 
 
 
@@ -299,6 +311,8 @@ def idle():
 
 
 def mouse(x, y):
+    global LOOK_X, LOOK_Y, LOOK_Z
+
     # When we look around, we want to point to a sphere around
     # the player's position. That way, when the mouse moves up,
     # down, left, and right, we show smooth motion.
@@ -317,7 +331,12 @@ def mouse(x, y):
     ROTATION[0] = (x / 640.0) * 360.0
     ROTATION[1] = (y / 480.0) * 360.0 - 180.0
 
-    glutPostRedisplay()
+    phi = math.radians(ROTATION[0])
+    theta = math.radians(ROTATION[1])
+    LOOK_X = 2 * math.sin(phi) * math.cos(theta)
+    LOOK_Y = 2 * math.sin(phi) * math.sin(theta)
+    LOOK_Z = 2 * math.cos(phi)
+    # glutPostRedisplay()
 
 def main():
     global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
