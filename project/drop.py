@@ -49,18 +49,24 @@ BACKWARD = False
 
 CUBELIST = {}
 
-def draw_axes():
+def draw_reticle():
+    global WIDTH, HEIGHT
+
     glLineWidth(2.0)
     glBegin(GL_LINES)
-    glColor3f(1.0, 0.0, 0.0)    # x-axis is red
-    glVertex3fv(ORG)
-    glVertex3fv(XP)
-    glColor3f(0.0, 1.0, 0.0)    # y-axis is green
-    glVertex3fv(ORG)
-    glVertex3fv(YP)
-    glColor3f(0.0, 0.0, 1.0)    # z-axis is lue
-    glVertex3fv(ORG)
-    glVertex3fv(ZP)
+
+    vert_top = HEIGHT / 2 - 10
+    vert_bot = HEIGHT / 2 + 10
+
+    horiz_left = WIDTH / 2 - 10
+    horiz_right = WIDTH / 2 + 10
+
+    glVertex2f(WIDTH / 2, vert_top)
+    glVertex2f(WIDTH / 2, vert_bot)
+
+    glVertex2f(horiz_left, HEIGHT / 2)
+    glVertex2f(horiz_right, HEIGHT / 2)
+
     glEnd()
 
 
@@ -116,6 +122,8 @@ def set_cubelist():
 
 def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    # 3D Drawing: using gluPerspective
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(65.0, WIDTH / float(HEIGHT), 0.1, 60.0)
@@ -136,21 +144,19 @@ def display():
     for c in CUBELIST:
         draw_cube(*c)
 
+    # 2D Drawing: using gluOrtho2D
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(0, WIDTH, HEIGHT, 0);
 
-    draw_axes()
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    glColor3f(1, 0, 0)
+    draw_reticle()
+        
     glFlush()
     return
 
-    if False:
-        for x in range(-10, 10):
-            for z in range(-10, 10):
-                glColor3f(0.2, abs((x * z) / 100.0), 0.2)
-                glBegin(GL_QUADS);
-                glVertex3f(0, 0, 0)
-                glVertex3f(10 * x, 0, 0)
-                glVertex3f(10 * x, 0, 10 * z)
-                glVertex3f(0, 0, 10 * z)
-                glEnd()
 
 
 
