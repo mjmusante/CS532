@@ -41,11 +41,12 @@ POS_Y = 0
 POS_Z = 0
 JUMP = False
 JUMPING = False
-JUMPLOC = 0
-JUMPDEG = 0
+JUMPTIME = 0
 
 FORWARD = False
 BACKWARD = False
+MOVE_LEFT = False
+MOVE_RIGHT = False
 
 LOOK_X, LOOK_Y, LOOK_Z = (0, 0, 0)
 
@@ -113,13 +114,13 @@ class Cube:
         self.color = c
 
 def set_cubelist():
-    blah = ""
     for z in range (-16, 16):
         for x in range(-16, 16):
             for y in range(-4, 1):
                 pos = (x, y, z)
                 CUBELIST[pos] = 1
-    print(blah)
+    CUBELIST[(10, 1, 10)] = 1
+    CUBELIST[(10, 2, 10)] = 1
 
 
 def display():
@@ -145,7 +146,7 @@ def display():
 #              POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
 #              0, 1, 0)
     gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
-              LOOK_X, LOOK_Y, LOOK_Z,
+              POS_X + LOOK_X, POS_Y + 1.7 + LOOK_Y, POS_Z + LOOK_Z,
               0, 1, 0)
 
     glColor3f(1, 1, 1)
@@ -188,6 +189,7 @@ def keypress(key, x, y):
     global JUMP
     global WIN
     global FORWARD, BACKWARD
+    global MOVE_LEFT, MOVE_RIGHT
 
     new_x = POS_X
     new_z = POS_Z
@@ -195,19 +197,19 @@ def keypress(key, x, y):
     if key == b'w':
         # new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
         # new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
-        print("forward start")
         FORWARD = True
     elif key == b's':
         # new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
         # new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
-        print("backward start")
         BACKWARD = True
     elif key == b'a':
-        new_z += 0.2 * math.sin(math.radians(ROTATION[0] + 90))
-        new_x += 0.2 * math.cos(math.radians(ROTATION[0] + 90))
+        # new_z += 0.2 * math.sin(math.radians(ROTATION[0] + 90))
+        # new_x += 0.2 * math.cos(math.radians(ROTATION[0] + 90))
+        MOVE_LEFT = True
     elif key == b'd':
-        new_z += 0.2 * math.sin(math.radians(ROTATION[0] - 90))
-        new_x += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
+        # new_z += 0.2 * math.sin(math.radians(ROTATION[0] - 90))
+        # new_x += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
+        MOVE_RIGHT = True
     elif key == b' ':
         JUMP = True
     elif key == "\x1b":
@@ -225,18 +227,22 @@ def update_position(new_x, new_y, new_z):
         POS_X = new_x
         POS_Y = new_y
         POS_Z = new_z
-        redisp = True
-
-    return redisp
 
 def keyup(key, x, y):
     global FORWARD, BACKWARD
+    global MOVE_LEFT, MOVE_RIGHT
+    global JUMP
+
     if key == b'w':
         FORWARD = False
-        print('forward end')
     elif key == b's':
         BACKWARD = False
-        print('backward end')
+    elif key == b'a':
+        MOVE_LEFT = False
+    elif key == b'd':
+        MOVE_RIGHT = False
+    elif key == b' ':
+        JUMP = False
 
 def block_at_pos(x, y, z):
     x = int(x)
@@ -248,70 +254,52 @@ def timer(val):
     glutTimerFunc(33, timer, 0)
 
     global FORWARD, BACKWARD, ROTATION
+    global MOVE_LEFT, MOVE_RIGHT
     global POS_X, POS_Y, POS_Z
     global LOOK_X, LOOK_Y
+    global LOOK_X_90
+    global LOOK_Z_90
+    global JUMP, JUMPING, JUMPTIME, JUMPBASE
 
     new_x, new_y, new_z = (POS_X, POS_Y, POS_Z)
 
     if FORWARD:
-        new_x += 0.2 * LOOK_X
-        new_z += 0.2 * LOOK_Z
+        new_x += 0.1 * LOOK_X
+        new_z += 0.1 * LOOK_Z
     if BACKWARD:
-        new_x -= 0.2 * LOOK_X
-        new_z -= 0.2 * LOOK_Z
+        new_x -= 0.1 * LOOK_X
+        new_z -= 0.1 * LOOK_Z
+    if MOVE_LEFT:
+        new_x += 0.1 * LOOK_X_90
+        new_z += 0.1 * LOOK_Z_90
+    if MOVE_RIGHT:
+        new_x -= 0.1 * LOOK_X_90
+        new_z -= 0.1 * LOOK_Z_90
 
-    if not block_at_pos(POS_X, POS_Y - 1, POS_Z) or \
+    if JUMPING:
+        dur = datetime.now() - JUMPTIME
+        ms = dur.seconds * 10**3 + dur.microseconds / 10**3
+        if ms > 800:
+            JUMPING = False
+        else:
+            new_y = JUMPBASE + 2 * math.sin(math.radians(180.0 * ms / 800))
+    elif JUMP:
+        JUMPING = True
+        JUMPTIME = datetime.now()
+        JUMPBASE = POS_Y
+    elif not block_at_pos(POS_X, POS_Y - 1, POS_Z) or \
             POS_Y > int(POS_Y) + 0.25:
         new_y -= 0.2
-    
+
     update_position(new_x, new_y, new_z)
     glutPostRedisplay()
 
 
-
-TIME = datetime.now()
-
-def idle():
-    global TIME, POS_Y
-    global JUMP, JUMPING, JUMPDEG, JUMPLOC
-
-    cur = datetime.now()
-    diff = cur - TIME
-    if diff.microseconds >= 50000:
-        TIME = cur
-        redisp = False
-
-        if not block_at_pos(POS_X, POS_Y - 1, POS_Z) or \
-                POS_Y > int(POS_Y) + 0.25:
-            POS_Y -= 0.25
-            redisp = True
-
-        if JUMPING:
-            JUMPDEG += 10
-            if JUMPDEG < 180:
-                new_y = JUMPLOC + 2 * math.sin(math.radians(JUMPDEG))
-            else:
-                new_y = JUMPLOC
-                JUMPING = False
-
-            if block_at_pos(POS_X, new_y, POS_Z):
-                new_y = int(new_y) + 1
-                JUMPING = False
-
-            POS_Y = new_y
-            JUMP = False
-        elif JUMP:
-            JUMPING = True
-            JUMPDEG = 0
-            JUMPLOC = POS_Y
-            JUMP = False
-
-        if redisp:
-            glutPostRedisplay()
-
-
 def mouse(x, y):
     global LOOK_X, LOOK_Y, LOOK_Z
+    global LOOK_X_90
+    global LOOK_Z_90
+    global WIDTH, HEIGHT
 
     # When we look around, we want to point to a sphere around
     # the player's position. That way, when the mouse moves up,
@@ -326,17 +314,18 @@ def mouse(x, y):
     # because we're just using it as a direction to look.
     #
 
-    x = x % 640
-    y = y % 480
-    ROTATION[0] = (x / 640.0) * 360.0
-    ROTATION[1] = (y / 480.0) * 360.0 - 180.0
+    x = float(x % WIDTH)
+    y = float(y % HEIGHT)
+    ROTATION[0] = 180.0 - (x / WIDTH) * 180.0
+    ROTATION[1] = 180.0 - (y / HEIGHT) * 360.0
 
     phi = math.radians(ROTATION[0])
     theta = math.radians(ROTATION[1])
-    LOOK_X = 2 * math.sin(phi) * math.cos(theta)
-    LOOK_Y = 2 * math.sin(phi) * math.sin(theta)
-    LOOK_Z = 2 * math.cos(phi)
-    # glutPostRedisplay()
+    LOOK_X =  math.sin(phi) * math.cos(theta)
+    LOOK_X_90 =  math.sin(phi + 91) * math.cos(theta)
+    LOOK_Y =  math.sin(phi) * math.sin(theta)
+    LOOK_Z =  math.cos(phi)
+    LOOK_Z_90 =  math.cos(phi + 91)
 
 def main():
     global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
