@@ -51,6 +51,7 @@ MOVE_RIGHT = False
 LOOK_X, LOOK_Y, LOOK_Z = (0, 0, 0)
 
 CUBELIST = {}
+CUBELINES = False
 
 def draw_reticle():
     global WIDTH, HEIGHT
@@ -73,9 +74,31 @@ def draw_reticle():
     glEnd()
 
 
+def draw_cubelines(x, y, z):
+    d = 0.5
+    glBegin(GL_LINE_LOOP)
+    glVertex3f(x - d, y - d, z - d)
+    glVertex3f(x + d, y - d, z - d)
+    glVertex3f(x + d, y + d, z - d)
+    glVertex3f(x - d, y + d, z - d)
+    glEnd()
+
+    glBegin(GL_LINE_LOOP)
+    glVertex3f(x - d, y - d, z + d)
+    glVertex3f(x + d, y - d, z + d)
+    glVertex3f(x + d, y + d, z + d)
+    glVertex3f(x - d, y + d, z + d)
+    glEnd()
+
+    glBegin(GL_LINES)
+    glVertex3f(x - d, y + d, z - d)
+    glVertex3f(x - d, y + d, z + d)
+    glVertex3f(x + d, y + d, z - d)
+    glVertex3f(x + d, y + d, z + d)
+    glEnd()
+
 def draw_cube(x, y, z):
     d = 0.5
-
 
     # top
     if not (x, y+1, z) in CUBELIST:
@@ -126,7 +149,7 @@ def set_cubelist():
 def display():
     global POS_X, POS_Y, POS_Z
     global LOOK_X, LOOK_Y, LOOK_Z
-    global CUBELIST
+    global CUBELIST, CUBELINES
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -151,8 +174,14 @@ def display():
 
     glColor3f(1, 1, 1)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
     for c in CUBELIST:
         draw_cube(*c)
+
+    if CUBELINES:
+        glColor3f(0, 0, 0)
+        glLineWidth(5.0)
+        draw_cubelines(*CUBELINES)
 
     # 2D Drawing: using gluOrtho2D
     glMatrixMode(GL_PROJECTION)
@@ -257,9 +286,9 @@ def timer(val):
     global MOVE_LEFT, MOVE_RIGHT
     global POS_X, POS_Y, POS_Z
     global LOOK_X, LOOK_Y
-    global LOOK_X_90
-    global LOOK_Z_90
+    global LOOK_X_90, LOOK_Z_90
     global JUMP, JUMPING, JUMPTIME, JUMPBASE
+    global CUBELINES
 
     new_x, new_y, new_z = (POS_X, POS_Y, POS_Z)
 
@@ -275,6 +304,15 @@ def timer(val):
     if MOVE_RIGHT:
         new_x -= 0.1 * LOOK_X_90
         new_z -= 0.1 * LOOK_Z_90
+
+    CUBELINES = False
+    for i in range(0, 5):
+        x = POS_X + LOOK_X * i
+        y = POS_Y + LOOK_Y * i
+        z = POS_Z + LOOK_Z * i
+        if block_at_pos(x, y, z):
+            CUBELINES = (int(x), int(y), int(z))
+            break
 
     if JUMPING:
         dur = datetime.now() - JUMPTIME
@@ -320,12 +358,13 @@ def mouse(x, y):
     ROTATION[1] = 180.0 - (y / HEIGHT) * 360.0
 
     phi = math.radians(ROTATION[0])
+    phi90 = math.radians(ROTATION[0] + 90)
     theta = math.radians(ROTATION[1])
     LOOK_X =  math.sin(phi) * math.cos(theta)
-    LOOK_X_90 =  math.sin(phi + 91) * math.cos(theta)
+    LOOK_X_90 =  math.sin(phi90) * math.cos(theta)
     LOOK_Y =  math.sin(phi) * math.sin(theta)
     LOOK_Z =  math.cos(phi)
-    LOOK_Z_90 =  math.cos(phi + 91)
+    LOOK_Z_90 =  math.cos(phi90)
 
 def main():
     global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
