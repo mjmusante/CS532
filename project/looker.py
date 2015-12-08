@@ -30,7 +30,7 @@ HEIGHT = 480
 VIEW = [0.0, 0.0, 0.0]
 PLAYER = [10.0, 11.7, 0.0]
 POS_X = 10
-POS_Y = 1.7
+POS_Y = 0
 POS_Z = 10
 
 CUBELIST = []
@@ -100,9 +100,9 @@ class Cube:
         self.color = c
 
 def set_cubelist():
-    for y in range (-4, 4):
+    for z in range (-16, 16):
         for x in range(-16, 16):
-            c = Cube((x, y, 0), 0.5 + random.random() / 2.0)
+            c = Cube((x, -1, z), 0.5 + random.random() / 2.0)
             CUBELIST.append(c)
 
 
@@ -118,7 +118,7 @@ def display():
     glDepthFunc(GL_LESS)
     gluLookAt(POS_X, 1.7, POS_Z,
               POS_X + 10 * math.cos(math.radians(ROTATION[0])),
-              POS_Y + 10 * math.cos(math.radians(ROTATION[1])),
+              POS_Y + 10 * math.cos(math.radians(ROTATION[1])) + 1.7,
               POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
               0, 1, 0)
     glColor3f(0.3, 0.8, 0.4)
@@ -177,6 +177,12 @@ def keypress(key, x, y):
         POS_X += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
     glutPostRedisplay()
 
+def block_at_loc(x, y, z):
+    x = int(x)
+    y = int(y)
+    z = int(z)
+    return (x, y, z) in CUBELIST
+
 TIME = datetime.now()
 
 def idle():
@@ -185,7 +191,8 @@ def idle():
     cur = datetime.now()
     diff = cur - TIME
     if diff.microseconds >= 20000:
-        POS_Y += 0.01
+        if not block_at_loc(POS_X, POS_Y - 1, POS_Z):
+            POS_Y -= 0.1
         TIME = cur
         glutPostRedisplay()
 

@@ -42,6 +42,7 @@ POS_Z = 0
 JUMP = False
 JUMPING = False
 JUMPTIME = 0
+LASTTIME = 0
 
 FORWARD = False
 BACKWARD = False
@@ -163,11 +164,6 @@ def display():
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_TEXTURE_2D)
     glDepthFunc(GL_LESS)
-#    gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
-#              POS_X + 10 * math.cos(math.radians(ROTATION[0])),
-#              POS_Y + 10 * math.cos(math.radians(ROTATION[1])) + 1.7,
-#              POS_Z + 10 * math.sin(math.radians(ROTATION[0])),
-#              0, 1, 0)
     gluLookAt(POS_X, POS_Y + 1.7, POS_Z,
               POS_X + LOOK_X, POS_Y + 1.7 + LOOK_Y, POS_Z + LOOK_Z,
               0, 1, 0)
@@ -241,7 +237,7 @@ def keypress(key, x, y):
         MOVE_RIGHT = True
     elif key == b' ':
         JUMP = True
-    elif key == "\x1b":
+    elif key == b'\x1b':
         glutDestroyWindow(WIN)
         sys.exit(0)
     else:
@@ -280,8 +276,6 @@ def block_at_pos(x, y, z):
     return (x, y, z) in CUBELIST
 
 def timer(val):
-    glutTimerFunc(33, timer, 0)
-
     global FORWARD, BACKWARD, ROTATION
     global MOVE_LEFT, MOVE_RIGHT
     global POS_X, POS_Y, POS_Z
@@ -289,26 +283,33 @@ def timer(val):
     global LOOK_X_90, LOOK_Z_90
     global JUMP, JUMPING, JUMPTIME, JUMPBASE
     global CUBELINES
+    global LASTTIME
+
+    glutTimerFunc(33, timer, 0)
+    now = datetime.now()
+    diff = now - LASTTIME
+    LASTTIME = now
 
     new_x, new_y, new_z = (POS_X, POS_Y, POS_Z)
 
+    dist = 4.0 * (diff.seconds * 1000.0 + diff.microseconds / 1000.0) / 1000.0
     if FORWARD:
-        new_x += 0.1 * LOOK_X
-        new_z += 0.1 * LOOK_Z
+        new_x += dist * LOOK_X
+        new_z += dist * LOOK_Z
     if BACKWARD:
-        new_x -= 0.1 * LOOK_X
-        new_z -= 0.1 * LOOK_Z
+        new_x -= dist * LOOK_X
+        new_z -= dist * LOOK_Z
     if MOVE_LEFT:
-        new_x += 0.1 * LOOK_X_90
-        new_z += 0.1 * LOOK_Z_90
+        new_x += dist * LOOK_X_90
+        new_z += dist * LOOK_Z_90
     if MOVE_RIGHT:
-        new_x -= 0.1 * LOOK_X_90
-        new_z -= 0.1 * LOOK_Z_90
+        new_x -= dist * LOOK_X_90
+        new_z -= dist * LOOK_Z_90
 
     CUBELINES = False
     for i in range(0, 5):
         x = POS_X + LOOK_X * i
-        y = POS_Y + LOOK_Y * i
+        y = 1.7 + POS_Y + LOOK_Y * i
         z = POS_Z + LOOK_Z * i
         if block_at_pos(x, y, z):
             CUBELINES = (int(x), int(y), int(z))
@@ -368,6 +369,7 @@ def mouse(x, y):
 
 def main():
     global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
+    global LASTTIME
 
     set_cubelist()
 
@@ -382,17 +384,18 @@ def main():
     glutKeyboardFunc(keypress)
     glutKeyboardUpFunc(keyup)
     glutPassiveMotionFunc(mouse)
+    LASTTIME = datetime.now()
     glutTimerFunc(50, timer, 0)
     # glutIdleFunc(idle)
 
     TEX_TOP = Texture()
-    TEX_TOP.load("grass-top.jpg")
+    TEX_TOP.load("grass-top-16x16.jpg")
 
     TEX_BOT = Texture()
-    TEX_BOT.load("grass-bottom.jpg")
+    TEX_BOT.load("grass-bot-16x16.jpg")
 
     TEX_SIDE = Texture()
-    TEX_SIDE.load("grass-side.jpg")
+    TEX_SIDE.load("grass-side-16x16.jpg")
 
     glClearColor(0.3, 0.4, 1.0, 1.0)
 
