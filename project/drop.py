@@ -53,6 +53,8 @@ LOOK_X, LOOK_Y, LOOK_Z = (0, 0, 0)
 
 CUBELIST = {}
 CUBELINES = False
+pCUBELINES = False
+DOTS = []
 
 def draw_reticle():
     global WIDTH, HEIGHT
@@ -76,60 +78,58 @@ def draw_reticle():
 
 
 def draw_cubelines(x, y, z):
-    d = 0.5
-    glBegin(GL_LINE_LOOP)
-    glVertex3f(x - d, y - d, z - d)
-    glVertex3f(x + d, y - d, z - d)
-    glVertex3f(x + d, y + d, z - d)
-    glVertex3f(x - d, y + d, z - d)
-    glEnd()
+        glBegin(GL_LINE_LOOP)
+        glVertex3f(x, y - 1, z)
+        glVertex3f(x + 1, y - 1, z)
+        glVertex3f(x + 1, y, z)
+        glVertex3f(x, y, z)
+        glEnd()
 
-    glBegin(GL_LINE_LOOP)
-    glVertex3f(x - d, y - d, z + d)
-    glVertex3f(x + d, y - d, z + d)
-    glVertex3f(x + d, y + d, z + d)
-    glVertex3f(x - d, y + d, z + d)
-    glEnd()
+        glBegin(GL_LINE_LOOP)
+        glVertex3f(x, y - 1, z + 1)
+        glVertex3f(x + 1, y - 1, z + 1)
+        glVertex3f(x + 1, y, z + 1)
+        glVertex3f(x, y, z + 1)
+        glEnd()
 
-    glBegin(GL_LINES)
-    glVertex3f(x - d, y + d, z - d)
-    glVertex3f(x - d, y + d, z + d)
-    glVertex3f(x + d, y + d, z - d)
-    glVertex3f(x + d, y + d, z + d)
-    glEnd()
+        glBegin(GL_LINES)
+        glVertex3f(x, y, z)
+        glVertex3f(x, y, z + 1)
+        glVertex3f(x + 1, y, z)
+        glVertex3f(x + 1, y, z + 1)
+        glEnd()
 
 def draw_cube(x, y, z):
-    d = 0.5
 
     # top
     if not (x, y+1, z) in CUBELIST:
-        TEX_TOP.draw([(x - d, y + d, z - d), (x - d, y + d, z + d),
-                      (x + d, y + d, z + d), (x + d, y + d, z - d)])
+        TEX_TOP.draw([(x    , y, z    ), (x    , y, z + 1),
+                      (x + 1, y, z + 1), (x + 1, y, z    )])
 
     # bottom
     if not (x, y-1, z) in CUBELIST:
-        TEX_BOT.draw([(x - d, y - d, z - d), (x + d, y - d, z - d),
-                      (x + d, y - d, z + d), (x - d, y - d, z + d)])
+        TEX_BOT.draw([(x    , y - 1, z    ), (x + 1, y - 1, z    ),
+                      (x + 1, y - 1, z + 1), (x    , y - 1, z + 1)])
 
     # left
     if not (x-1, y, z) in CUBELIST:
-        TEX_SIDE.draw([(x - d, y - d, z - d), (x - d, y - d, z + d),
-                       (x - d, y + d, z + d), (x - d, y + d, z - d)])
+        TEX_SIDE.draw([(x    , y - 1, z    ), (x    , y - 1, z + 1),
+                       (x    , y    , z + 1), (x    , y    , z    )])
 
     # right
     if not (x+1, y, z) in CUBELIST:
-        TEX_SIDE.draw([(x + d, y - d, z + d), (x + d, y - d, z - d),
-                       (x + d, y + d, z - d), (x + d, y + d, z + d)])
+        TEX_SIDE.draw([(x + 1, y - 1, z + 1), (x + 1, y - 1, z    ),
+                       (x + 1, y    , z    ), (x + 1, y    , z + 1)])
 
     # front
     if not (x, y, z+1) in CUBELIST:
-        TEX_SIDE.draw([(x - d, y - d, z + d), (x + d, y - d, z + d),
-                       (x + d, y + d, z + d), (x - d, y + d, z + d)])
+        TEX_SIDE.draw([(x    , y - 1, z + 1), (x + 1, y - 1, z + 1),
+                       (x + 1, y    , z + 1), (x    , y    , z + 1)])
 
     # back
     if not (x, y, z-1) in CUBELIST:
-        TEX_SIDE.draw([(x + d, y - d, z - d), (x - d, y - d, z - d),
-                       (x - d, y + d, z - d), (x + d, y + d, z - d)])
+        TEX_SIDE.draw([(x + 1, y - 1, z    ), (x    , y - 1, z    ),
+                       (x    , y    , z    ), (x + 1, y    , z    )])
 
 
 class Cube:
@@ -150,7 +150,7 @@ def set_cubelist():
 def display():
     global POS_X, POS_Y, POS_Z
     global LOOK_X, LOOK_Y, LOOK_Z
-    global CUBELIST, CUBELINES
+    global CUBELIST, CUBELINES, DOTS
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -179,6 +179,11 @@ def display():
         glLineWidth(5.0)
         draw_cubelines(*CUBELINES)
 
+    if len(DOTS) > 0:
+        glBegin(GL_LINE_LOOP)
+        for d in DOTS:
+            glVertex3f(*d)
+        glEnd()
     # 2D Drawing: using gluOrtho2D
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
@@ -282,7 +287,7 @@ def timer(val):
     global LOOK_X, LOOK_Y
     global LOOK_X_90, LOOK_Z_90
     global JUMP, JUMPING, JUMPTIME, JUMPBASE
-    global CUBELINES
+    global CUBELINES, pCUBELINES, DOTS
     global LASTTIME
 
     glutTimerFunc(33, timer, 0)
@@ -307,13 +312,20 @@ def timer(val):
         new_z -= dist * LOOK_Z_90
 
     CUBELINES = False
-    for i in range(0, 5):
+    DOTS = []
+    i = 0.0
+    while i < 5.0:
+        i += 0.1
         x = POS_X + LOOK_X * i
         y = 1.7 + POS_Y + LOOK_Y * i
         z = POS_Z + LOOK_Z * i
-        if block_at_pos(x, y, z):
-            CUBELINES = (int(x), int(y), int(z))
+        DOTS.append((x, y, z),)
+        foo = (int(x), int(y), int(z))
+        if block_at_pos(*foo):
+            CUBELINES = foo
             break
+        else:
+            pCUBELINES = foo
 
     if JUMPING:
         dur = datetime.now() - JUMPTIME
@@ -367,6 +379,18 @@ def mouse(x, y):
     LOOK_Z =  math.cos(phi)
     LOOK_Z_90 =  math.cos(phi90)
 
+def clicker(button, state, x, y):
+    global CUBELINES
+
+    if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+        if CUBELINES:
+            if CUBELINES in CUBELIST:
+                del CUBELIST[CUBELINES]
+    if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
+        if CUBELINES:
+            if pCUBELINES not in CUBELIST:
+                CUBELIST[pCUBELINES] = 1
+
 def main():
     global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
     global LASTTIME
@@ -384,6 +408,7 @@ def main():
     glutKeyboardFunc(keypress)
     glutKeyboardUpFunc(keyup)
     glutPassiveMotionFunc(mouse)
+    glutMouseFunc(clicker)
     LASTTIME = datetime.now()
     glutTimerFunc(50, timer, 0)
     # glutIdleFunc(idle)
