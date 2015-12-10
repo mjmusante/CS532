@@ -180,7 +180,7 @@ def display():
         draw_cubelines(*CUBELINES)
 
     if len(DOTS) > 0:
-        glBegin(GL_LINE_LOOP)
+        glBegin(GL_POINTS)
         for d in DOTS:
             glVertex3f(*d)
         glEnd()
@@ -225,20 +225,12 @@ def keypress(key, x, y):
     new_z = POS_Z
 
     if key == b'w':
-        # new_z += 0.2 * math.sin(math.radians(ROTATION[0]))
-        # new_x += 0.2 * math.cos(math.radians(ROTATION[0]))
         FORWARD = True
     elif key == b's':
-        # new_z -= 0.2 * math.sin(math.radians(ROTATION[0]))
-        # new_x -= 0.2 * math.cos(math.radians(ROTATION[0]))
         BACKWARD = True
     elif key == b'a':
-        # new_z += 0.2 * math.sin(math.radians(ROTATION[0] + 90))
-        # new_x += 0.2 * math.cos(math.radians(ROTATION[0] + 90))
         MOVE_LEFT = True
     elif key == b'd':
-        # new_z += 0.2 * math.sin(math.radians(ROTATION[0] - 90))
-        # new_x += 0.2 * math.cos(math.radians(ROTATION[0] - 90))
         MOVE_RIGHT = True
     elif key == b' ':
         JUMP = True
@@ -319,8 +311,8 @@ def timer(val):
         x = POS_X + LOOK_X * i
         y = 1.7 + POS_Y + LOOK_Y * i
         z = POS_Z + LOOK_Z * i
-        DOTS.append((x, y, z),)
-        foo = (int(x), int(y), int(z))
+        # DOTS.append((x, y, z),)
+        foo = (int(x + 0.5), int(y + 0.5), int(z + 0.5))
         if block_at_pos(*foo):
             CUBELINES = foo
             break
