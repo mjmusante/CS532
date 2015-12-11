@@ -25,9 +25,7 @@ YN = [0.0, -1.0, 0.0]
 ZP = [0.0, 0.0, 1.0]
 ZN = [0.0, 0.0, -1.0]
 
-TEX_TOP = False
-TEX_BOT = False
-TEX_SIDE = False
+TEXTURE = []
 
 ROTATION = [0.0, 0.0]
 
@@ -99,37 +97,40 @@ def draw_cubelines(x, y, z):
         glVertex3f(x + 1, y, z + 1)
         glEnd()
 
-def draw_cube(x, y, z):
+def draw_cube(x, y, z, which):
+    global TEXTURE
+
+    top, side, bottom = TEXTURE[which]
 
     # top
     if not (x, y+1, z) in CUBELIST:
-        TEX_TOP.draw([(x    , y, z    ), (x    , y, z + 1),
-                      (x + 1, y, z + 1), (x + 1, y, z    )])
+        top.draw([(x    , y, z    ), (x    , y, z + 1),
+                  (x + 1, y, z + 1), (x + 1, y, z    )])
 
     # bottom
     if not (x, y-1, z) in CUBELIST:
-        TEX_BOT.draw([(x    , y - 1, z    ), (x + 1, y - 1, z    ),
-                      (x + 1, y - 1, z + 1), (x    , y - 1, z + 1)])
+        bottom.draw([(x    , y - 1, z    ), (x + 1, y - 1, z    ),
+                     (x + 1, y - 1, z + 1), (x    , y - 1, z + 1)])
 
     # left
     if not (x-1, y, z) in CUBELIST:
-        TEX_SIDE.draw([(x    , y - 1, z    ), (x    , y - 1, z + 1),
-                       (x    , y    , z + 1), (x    , y    , z    )])
+        side.draw([(x    , y - 1, z    ), (x    , y - 1, z + 1),
+                   (x    , y    , z + 1), (x    , y    , z    )])
 
     # right
     if not (x+1, y, z) in CUBELIST:
-        TEX_SIDE.draw([(x + 1, y - 1, z + 1), (x + 1, y - 1, z    ),
-                       (x + 1, y    , z    ), (x + 1, y    , z + 1)])
+        side.draw([(x + 1, y - 1, z + 1), (x + 1, y - 1, z    ),
+                   (x + 1, y    , z    ), (x + 1, y    , z + 1)])
 
     # front
     if not (x, y, z+1) in CUBELIST:
-        TEX_SIDE.draw([(x    , y - 1, z + 1), (x + 1, y - 1, z + 1),
-                       (x + 1, y    , z + 1), (x    , y    , z + 1)])
+        side.draw([(x    , y - 1, z + 1), (x + 1, y - 1, z + 1),
+                   (x + 1, y    , z + 1), (x    , y    , z + 1)])
 
     # back
     if not (x, y, z-1) in CUBELIST:
-        TEX_SIDE.draw([(x + 1, y - 1, z    ), (x    , y - 1, z    ),
-                       (x    , y    , z    ), (x + 1, y    , z    )])
+        side.draw([(x + 1, y - 1, z    ), (x    , y - 1, z    ),
+                   (x    , y    , z    ), (x + 1, y    , z    )])
 
 
 class Cube:
@@ -140,10 +141,13 @@ class Cube:
 def set_cubelist():
     for z in range (-16, 16):
         for x in range(-16, 16):
-            for y in range(-4, 1):
-                pos = (x, y, z)
-                CUBELIST[pos] = 1
-    CUBELIST[(10, 1, 10)] = 1
+            for y in range(-4, 0):
+                CUBELIST[(x, y, z)] = 0
+            CUBELIST[(x, 0, z)] = 1
+            for y in range(-10, -4):
+                CUBELIST[(x, y, z)] = 2
+    CUBELIST[(10, 0, 10)] = 0
+    CUBELIST[(10, 1, 10)] = 0
     CUBELIST[(10, 2, 10)] = 1
 
 
@@ -172,7 +176,7 @@ def display():
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
     for c in CUBELIST:
-        draw_cube(*c)
+        draw_cube(*c, which=CUBELIST[c])
 
     if CUBELINES:
         glColor3f(0, 0, 0)
@@ -384,7 +388,8 @@ def clicker(button, state, x, y):
                 CUBELIST[pCUBELINES] = 1
 
 def main():
-    global WIN, TEX_TOP, TEX_BOT, TEX_SIDE
+    global WIN
+    global TEXTURE
     global LASTTIME
 
     set_cubelist()
@@ -405,14 +410,21 @@ def main():
     glutTimerFunc(50, timer, 0)
     # glutIdleFunc(idle)
 
-    TEX_TOP = Texture()
-    TEX_TOP.load("grass-top-16x16.jpg")
+    grass_top = Texture()
+    grass_top.load("grass-top-16x16.jpg")
 
-    TEX_BOT = Texture()
-    TEX_BOT.load("grass-bot-16x16.jpg")
+    dirt = Texture()
+    dirt.load("grass-bot-16x16.jpg")
 
-    TEX_SIDE = Texture()
-    TEX_SIDE.load("grass-side-16x16.jpg")
+    grass_side = Texture()
+    grass_side.load("grass-side-16x16.jpg")
+
+    stone = Texture()
+    stone.load("stone-16x16.jpg")
+
+    TEXTURE.append([dirt, dirt, dirt])
+    TEXTURE.append([grass_top, grass_side, dirt])
+    TEXTURE.append([stone, stone, stone])
 
     glClearColor(0.3, 0.4, 1.0, 1.0)
 
