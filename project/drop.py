@@ -199,7 +199,7 @@ def display():
     glLoadIdentity()
     glColor3f(1, 1, 1)
     draw_reticle()
-        
+
     glFlush()
     return
 
